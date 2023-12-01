@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import FavouriteScreen from '../screens/FavouriteScreen';
+import MusicPlayer from '../Component/MusicPlayer';
 
 const Tab = createBottomTabNavigator();
 
@@ -37,6 +38,12 @@ const BottomTabNavigator = () => {
                     return <Icon name={iconName} size={size} color={color} />;
                 },
             })}
+            tabBar={(props) => (
+                <View>
+                    <MusicPlayer />
+                    <BottomTabBar {...props} />
+                </View>
+            )}
         >
             <Tab.Screen name="Home" component={HomeScreen} />
             <Tab.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />

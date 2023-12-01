@@ -1,17 +1,63 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { usePlayerContext } from './Provider/PlayerProvider';
+import Sound from 'react-native-sound';
+import { useEffect, useRef, useState } from 'react';
 
 
 const MusicPlayer = () => {
+    const { track } = usePlayerContext();
+    const soundRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(false); // State to track play/pause status
 
-    const { track } = usePlayerContext()
+    useEffect(() => {
+        if (track?.preview_url) {
+            playTrack()
+        }
+    }, [track]);
+
+    const playTrack = () => {
+        Sound.setCategory('Playback'); // Set the audio category for playback
+
+        const sound = new Sound(track?.preview_url, null, (error) => {
+            if (error) {
+                console.log('Failed to load the sound', error);
+                return;
+            }
+            soundRef.current = sound;
+        });
+
+        return () => {
+            // Clean up resources when the component unmounts
+            if (soundRef.current) {
+                soundRef.current.release(); // Release the sound object
+            }
+        };
+    }
 
     if (!track) {
         return null;
     }
 
     const image = track.album.images?.[0];
+
+    const playSoundFromURL = () => {
+        if (!soundRef?.current?.isPlaying()) {
+            setIsPlaying(true);
+        }
+        if (soundRef.current && isPlaying) {
+            soundRef?.current?.pause(); // Pause the sound if it's already playing
+            setIsPlaying(false);
+        } else if (soundRef.current) {
+            soundRef.current.play((success) => {
+                if (success) {
+                    setIsPlaying(false); // Update the state to indicate sound is playing
+                } else {
+                    console.log('Sound did not play');
+                }
+            });
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -29,12 +75,14 @@ const MusicPlayer = () => {
                     color={'white'}
                     style={{ marginHorizontal: 10 }}
                 />
-                <Icon
-                    disabled={!track?.preview_url}
-                    name={'play'}
-                    size={22}
-                    color={track?.preview_url ? 'white' : 'gray'}
-                />
+
+                <Pressable disabled={!track?.preview_url} onPress={() => playSoundFromURL()}>
+                    <Icon
+                        name={isPlaying ? 'pause' : 'play'} // Toggle between play and pause icon
+                        size={22}
+                        color={'white'}
+                    />
+                </Pressable>
             </View>
         </View>
     );

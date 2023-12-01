@@ -1,9 +1,12 @@
 import { View, Text, StyleSheet, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { tracks } from '../../assets/data/tracks';
-const track = tracks[0];
+import { usePlayerContext } from './Provider/PlayerProvider';
+
 
 const MusicPlayer = () => {
+
+    const { track } = usePlayerContext()
+
     if (!track) {
         return null;
     }

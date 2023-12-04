@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Image, Alert, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { usePlayerContext } from './Provider/PlayerProvider';
+import { usePlayerContext } from '../Provider/PlayerProvider';
 import Sound from 'react-native-sound';
 import { useEffect, useRef, useState } from 'react';
 

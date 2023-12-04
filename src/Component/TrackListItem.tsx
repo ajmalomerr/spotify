@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Track } from '../types';
-import { usePlayerContext } from './Provider/PlayerProvider';
+import { usePlayerContext } from '../Provider/PlayerProvider';
 
 type TrackListItemProps = {
   track: Track;

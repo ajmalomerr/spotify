@@ -99,12 +99,7 @@ type Query {
   _recommendations(seed_genres: String, access_token: String!): Recommendation
     @rest(
       endpoint: "https://api.spotify.com/v1/recommendations"
-      headers: [
-        {
-          name: "authorization"
-          value: "Bearer $access_token"
-        }
-      ]
+      headers: [{ name: "authorization", value: "Bearer $access_token" }]
     )
   recommendations(seed_genres: String!): Recommendation
     @sequence(

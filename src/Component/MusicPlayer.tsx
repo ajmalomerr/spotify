@@ -1,14 +1,42 @@
-import { View, Text, StyleSheet, Image, Alert, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Alert, Pressable, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { usePlayerContext } from '../Provider/PlayerProvider';
 import Sound from 'react-native-sound';
 import { useEffect, useRef, useState } from 'react';
+import { gql, useMutation, useQuery } from '@apollo/client';
+
+const createFavoriteMutation = gql`
+mutation MyMutation ($userId : String!, $trackId : String!) {
+    insertFavorites(userid: $userId, trackid:  $trackId) {
+      id
+      trackid
+      userid
+    }
+  }
+`
+
+const isFavoriteQuery = gql`
+query MyQuery ($trackId : String!, $userId : String! ) {
+    favoritesByTrackidAndUserid(trackid: $trackId , userid: $userId) {
+      id
+      trackid
+      userid
+    }
+  }
+`
 
 
 const MusicPlayer = () => {
     const { track } = usePlayerContext();
-    const soundRef = useRef(null);
-    const [isPlaying, setIsPlaying] = useState(false); // State to track play/pause status
+    const [currentTrack, setCurrentTrack] = useState(null);
+    const [soundInstance, setSoundInstance] = useState(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    const [createFavorite] = useMutation(createFavoriteMutation);
+
+    const { data, refetch } = useQuery(isFavoriteQuery, { variables: { userId: "omer", trackId: track?.id || "" } })
+
+    const isLiked = data?.favoritesByTrackidAndUserid?.length > 0
 
     useEffect(() => {
         if (track?.preview_url) {
@@ -16,48 +44,54 @@ const MusicPlayer = () => {
         }
     }, [track]);
 
-    const playTrack = () => {
-        Sound.setCategory('Playback'); // Set the audio category for playback
-
-        const sound = new Sound(track?.preview_url, null, (error) => {
-            if (error) {
-                console.log('Failed to load the sound', error);
-                return;
-            }
-            soundRef.current = sound;
-        });
-
-        return () => {
-            // Clean up resources when the component unmounts
-            if (soundRef.current) {
-                soundRef.current.release(); // Release the sound object
-            }
-        };
-    }
-
     if (!track) {
         return null;
     }
 
     const image = track.album.images?.[0];
 
-    const playSoundFromURL = () => {
-        if (!soundRef?.current?.isPlaying()) {
-            setIsPlaying(true);
-        }
-        if (soundRef.current && isPlaying) {
-            soundRef?.current?.pause(); // Pause the sound if it's already playing
-            setIsPlaying(false);
-        } else if (soundRef.current) {
-            soundRef.current.play((success) => {
-                if (success) {
-                    setIsPlaying(false); // Update the state to indicate sound is playing
+    const playTrack = () => {
+        setTimeout(() => {
+            if (soundInstance && currentTrack === track.preview_url) {
+                // If the same track is already playing
+                if (soundInstance.isPlaying()) {
+                    soundInstance.pause(); // Pause the currently playing track
                 } else {
-                    console.log('Sound did not play');
+                    soundInstance.play(); // Resume playback if the track was paused
                 }
-            });
-        }
+            } else {
+                if (soundInstance) {
+                    soundInstance?.stop(); // Stop the currently playing track
+                    soundInstance?.release(); // Release the sound instance
+                }
+
+
+                const sound = new Sound(track.preview_url, null, (error) => {
+                    if (error) {
+                        console.log('Failed to load the sound', error);
+                        return;
+                    }
+                    setCurrentTrack(track?.preview_url);
+                    setSoundInstance(sound);
+                    setIsPlaying(true)
+                    sound.play((success) => {
+                        if (success) {
+                            console.log('Sound played successfully');
+                        } else {
+                            console.log('Sound did not play');
+                        }
+                    });
+                });
+
+            }
+        }, 500)
     };
+
+    const onClickFav = async () => {
+        if (!track) return;
+        await createFavorite({ variables: { userId: "omer", trackId: track?.id } });
+        refetch()
+    }
 
     return (
         <View style={styles.container}>
@@ -70,19 +104,33 @@ const MusicPlayer = () => {
                 </View>
 
                 <Icon
-                    name={'heart-outline'}
+                    onPress={() => onClickFav()}
+                    name={isLiked ? 'heart' : 'heart-outline'}
                     size={20}
                     color={'white'}
                     style={{ marginHorizontal: 10 }}
                 />
 
-                <Pressable disabled={!track?.preview_url} onPress={() => playSoundFromURL()}>
-                    <Icon
-                        name={isPlaying ? 'pause' : 'play'} // Toggle between play and pause icon
-                        size={22}
-                        color={'white'}
-                    />
-                </Pressable>
+                {/* </Pressable> */}
+
+                {(currentTrack != track?.preview_url) || currentTrack == null || !isPlaying ?
+                    <Pressable disabled={!track?.preview_url} onPress={() => playTrack()}>
+                        <Icon
+                            name={"play"}
+                            size={22}
+                            color={track?.preview_url ? 'white' : "grey"}
+                        />
+                    </Pressable> : null}
+
+                {isPlaying && currentTrack == track?.preview_url ?
+                    <Pressable disabled={!track?.preview_url} onPress={() => playTrack()}>
+                        <Icon
+                            name={"pause"}
+                            size={22}
+                            color={'white'}
+                        />
+                    </Pressable> : null}
+
             </View>
         </View>
     );

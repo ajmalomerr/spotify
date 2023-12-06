@@ -47,7 +47,7 @@ const BottomTabNavigator = () => {
         >
             <Tab.Screen name="Home" component={HomeScreen} />
             <Tab.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-            <Tab.Screen name="Favourite" component={FavouriteScreen} />
+            <Tab.Screen name="Favourite" component={FavouriteScreen} options={{ unmountOnBlur: true }} />
 
         </Tab.Navigator>
     );

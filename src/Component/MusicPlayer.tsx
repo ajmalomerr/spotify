@@ -26,6 +26,14 @@ query MyQuery ($trackId : String!, $userId : String! ) {
 `
 
 
+const removeFavoriteMutation = gql`
+mutation MyMutation ($trackId : String!, $userId : String!) {
+    deleteFavorites(trackid: $trackId, userid: $userId) {
+      id
+    }
+  }
+`
+
 const MusicPlayer = () => {
     const { track } = usePlayerContext();
     const [currentTrack, setCurrentTrack] = useState(null);
@@ -33,16 +41,11 @@ const MusicPlayer = () => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     const [createFavorite] = useMutation(createFavoriteMutation);
+    const [removeFavorite] = useMutation(removeFavoriteMutation);
 
     const { data, refetch } = useQuery(isFavoriteQuery, { variables: { userId: "omer", trackId: track?.id || "" } })
 
     const isLiked = data?.favoritesByTrackidAndUserid?.length > 0
-
-    useEffect(() => {
-        if (track?.preview_url) {
-            playTrack()
-        }
-    }, [track]);
 
     if (!track) {
         return null;
@@ -51,45 +54,43 @@ const MusicPlayer = () => {
     const image = track.album.images?.[0];
 
     const playTrack = () => {
-        setTimeout(() => {
-            if (soundInstance && currentTrack === track.preview_url) {
-                // If the same track is already playing
-                if (soundInstance.isPlaying()) {
-                    soundInstance.pause(); // Pause the currently playing track
-                } else {
-                    soundInstance.play(); // Resume playback if the track was paused
-                }
+        if (currentTrack === track.preview_url && soundInstance) {
+            if (soundInstance.isPlaying()) {
+                setIsPlaying(false)
+                soundInstance.pause();
             } else {
-                if (soundInstance) {
-                    soundInstance?.stop(); // Stop the currently playing track
-                    soundInstance?.release(); // Release the sound instance
-                }
-
-
-                const sound = new Sound(track.preview_url, null, (error) => {
-                    if (error) {
-                        console.log('Failed to load the sound', error);
-                        return;
-                    }
-                    setCurrentTrack(track?.preview_url);
-                    setSoundInstance(sound);
-                    setIsPlaying(true)
-                    sound.play((success) => {
-                        if (success) {
-                            console.log('Sound played successfully');
-                        } else {
-                            console.log('Sound did not play');
-                        }
-                    });
-                });
-
+                setIsPlaying(true)
+                soundInstance.play();
             }
-        }, 500)
+        } else {
+            // If a different track is selected, stop the current one and play the new one
+            soundInstance?.stop();
+            const sound = new Sound(track.preview_url, null, (error) => {
+                if (error) {
+                    console.log('Failed to load the sound', error);
+                    return;
+                }
+                setCurrentTrack(track.preview_url);
+                setSoundInstance(sound);
+                setIsPlaying(true)
+                sound.play((success) => {
+                    if (success) {
+                        console.log('Sound played successfully');
+                    } else {
+                        console.log('Sound did not play');
+                    }
+                });
+            });
+        }
     };
 
     const onClickFav = async () => {
         if (!track) return;
-        await createFavorite({ variables: { userId: "omer", trackId: track?.id } });
+        if (isLiked) {
+            await removeFavorite({ variables: { userId: "omer", trackId: track?.id } })
+        } else {
+            await createFavorite({ variables: { userId: "omer", trackId: track?.id } });
+        }
         refetch()
     }
 
